@@ -1,0 +1,38 @@
+heat_template_version: 2013-05-23
+description: |
+  Swift SAIO
+parameters:
+  keyName:
+    type: string
+    default: matt
+  flavor:
+    type: string
+    default: 4GB Standard Instance
+  image:
+    type: string
+    default: Ubuntu 12.04 LTS (Precise Pangolin)
+  serverName:
+    type: string
+    default: saio-heat
+
+resources:
+
+  saio:
+    type: Rackspace::Cloud::Server
+    properties:
+      name: { get_param: serverName }
+      image: { get_param: image }
+      flavor: { get_param: flavor }
+      key_name: { get_param: keyName }
+      user_data:
+        get_file: saio.sh
+
+outputs:
+
+  "Server ID":
+    value: { get_resource: saio }
+    description: The server id
+
+  "Server IP":
+    value: { get_attr: [ saio, accessIPv4 ] }
+    description: The server IP address
