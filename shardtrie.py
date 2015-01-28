@@ -83,12 +83,14 @@ class Node():
 
         return count
 
-    def add(self, key, data=[]):
+    def add(self, key, data=None, timestamp=None, flag=DATA_PRESENT):
         key_len = len(self.key)
+        if not timestamp:
+            timestamp = get_timestamp()
         if self.key == key:
-            self.data['timestamp'] = get_timestamp()
+            self.data['timestamp'] = timestamp
             self.data['data'] = data
-            self.data['flag'] = DATA_PRESENT
+            self.data['flag'] = flag
         elif key_len < len(key):
             next_key = key[:key_len + 1]
             if next_key not in self.children:
@@ -97,7 +99,7 @@ class Node():
                                 level=self.level + 1)
                 self.children[next_key] = new_node
 
-            self.children[next_key].add(key, data)
+            self.children[next_key].add(key, data, timestamp, flag)
 
     def get_node(self, key):
         key_len = len(self.key)
@@ -159,7 +161,7 @@ class Node():
 class ShardTrie():
     """A distributed prefix tree used for managing container shards
 
-    Nodes have a timestamp which is used for mreging trees.
+    Nodes have a timestamp which is used for merging trees.
     Throws ShardTrieDistributedBranchException, ShardTriedException
     """
     def __init__(self, root_key='', level=1, root_node=None):
@@ -180,8 +182,8 @@ class ShardTrie():
         for node in self._root:
             yield node
 
-    def add(self, key, data=[]):
-        self._root.add(key, data)
+    def add(self, key, data=[], timestamp=None, flag=DATA_PRESENT):
+        self._root.add(key, data, timestamp, flag)
 
     def get(self, key, full=False):
         return self._root.get(key, full)
@@ -193,10 +195,15 @@ class ShardTrie():
         self._root.delete(key)
 
     def get_data_nodes(self, key=None):
+        """ Generator returning data only nodes.
+
+        :param key: The key pointing to the part of the tree to start the
+                    search from, default is the root.
+        """
         if not key:
             node = self._root
         else:
-            node = self.get(key)
+            node = self.get_node(key)
 
         if node:
             for n in node:
@@ -204,14 +211,35 @@ class ShardTrie():
                     yield n
 
     def get_distributed_nodes(self, key=None):
+        """Generator returning distributed tree nodes in the tree.
+
+        :param key: The key pointing to the part of the tree to start the
+                    search from, default is the root.
+        """
         if not key:
             node = self._root
         else:
-            node = self.get(key)
+            node = self.get_node(key)
 
         if node:
             for n in node:
                 if n.is_distributed():
+                    yield n
+
+    def get_important_nodes(self, key=None):
+        """Generator returning but the data and distributed nodes in the tree.
+
+        :param key: The key pointing to the part of the tree to start the
+                    search from, default is the root.
+        """
+        if not key:
+            node = self._root
+        else:
+            node = self.get_node(key)
+
+        if node:
+            for n in node:
+                if n.is_distributed() or n.has_data():
                     yield n
 
     def split_trie(self, key):
