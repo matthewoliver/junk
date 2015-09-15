@@ -1,0 +1,116 @@
+Swift3 Instructions
+=======================
+
+This is assumes keystone authentication.
+
+Keystone Setup:
+------------------
+
+Make sure the s3_extension is defined and in the admin_api pipeline.
+
+  [filter:s3_extension]
+  paste.filter_factory = keystone.contrib.s3:S3Extension.factory
+
+  [pipeline:admin_api]
+  [ .. stuff ..] s3_extension [ .. possibly others ..] admin_service
+
+NOTE: This was already setup in keystone for me.
+
+We also need to make sure we have created an EC2 tokens for each user who will use swift, as it is the EC2 secret used as the S3's secret_access_key:
+
+  for user in <list of users>
+  do
+    openstack ec2 credentials create --project <project> --user $user
+  done
+
+That's all keystone should need.
+
+Swift swift3 middleware:
+---------------------------
+
+Firstly install the swift3 middleware. In this case I'll install it directly from git:
+
+  cd /opt/
+  git clone https://github.com/stackforge/swift3
+  cd swift3
+
+Before we build, I needed to install the python-lxml package:
+
+  apt-get install python-lxml
+
+Now we can install the pip dependancies and install the middleware:
+
+  pip install -r requirements.txt
+  python setup.py install
+
+The swift3 middleware only needs to be installed on the swift proxies. Because we are using keystone authentication there are 2 paste filters to configure and add to the proxy pipeline (in /etc/swift/proxy-server.conf). First lets configure the 2 paste filters, firstly 'swift3', which controls the s3 api configuration, so will leave comments in:
+
+  [filter:swift3]
+  use = egg:swift3#swift3
+
+  # Swift has no concept of the S3's resource owner; the resources
+  # (i.e. containers and objects) created via the Swift API have no owner
+  # information. This option specifies how the swift3 middleware handles them
+  # with the S3 API.  If this option is 'false', such kinds of resources will be
+  # invisible and no users can access them with the S3 API.  If set to 'true',
+  # the resource without owner is belong to everyone and everyone can access it
+  # with the S3 API.  If you care about S3 compatibility, set 'false' here.  This
+  # option makes sense only when the s3_acl option is set to 'true' and your
+  # Swift cluster has the resources created via the Swift API.
+  allow_no_owner = false
+
+  # Set a region name of your Swift cluster.  Note that Swift3 doesn't choose a
+  # region of the newly created bucket actually.  This value is used only for the
+  # GET Bucket location API.
+  location = US
+
+  # Set the default maximum number of objects returned in the GET Bucket
+  # response.
+  max_bucket_listing = 1000
+
+  # Set the maximum number of objects we can delete with the Multi-Object Delete
+  # operation.
+  max_multi_delete_objects = 1000
+
+  # If set to 'true', Swift3 uses its own metadata for ACL
+  # (e.g. X-Container-Sysmeta-Swift3-Acl) to achieve the best S3 compatibility.
+  # If set to 'false', Swift3 tries to use Swift ACL (e.g. X-Container-Read)
+  # instead of S3 ACL as far as possible.  If you want to keep backward
+  # compatibility with Swift3 1.7 or earlier, set false here
+  # If set to 'false' after set to 'true' and put some container/object,
+  # all users will be able to access container/object.
+  # Note that s3_acl doesn't keep the acl consistency between S3 API and Swift
+  # API. (e.g. when set s3acl to true and PUT acl, we won't get the acl
+  # information via Swift API at all and the acl won't be applied against to
+  # Swift API even if it is for a bucket currently supported.)
+  # Note that s3_acl currently supports only keystone and tempauth.
+  # DON'T USE THIS for production before enough testing for your use cases.
+  # This stuff is still under development and it might cause something
+  # you don't expect.
+  s3_acl = false
+
+  # Specify a host name of your Swift cluster.  This enables virtual-hosted style
+  # requests.
+  storage_domain =
+
+Next, well define the s3token paste filter, this one just needs to be configured to talk to the keystone server (or VIP):
+
+  [filter:s3token]
+  paste.filter_factory = keystoneclient.middleware.s3_token:filter_factory
+  auth_port = 35357
+  auth_host = <keystone server>
+  auth_protocol = <protocol http(s)>
+
+With those defined we can now add them to the proxies pipleline:
+
+  [pipeline:main]
+  [.. other middlewares ..] swift3 s3token authtoken keystoneauth [.. rest ..]
+
+NOTE: before the keystone 'authtoken' and 'keystoneauth' middlewares.
+
+For example, in one of my test clusters:
+
+  [pipeline:main]
+  pipeline = catch_errors gatekeeper healthcheck proxy-logging cache container_sync bulk tempurl ratelimit swift3 s3token authtoken keystoneauth container-quotas account-quotas slo dlo proxy-logging proxy-server
+
+That's it, restart the proxies, and you should be good to go. See my earlier email if you want some basic python boto client code to test.
