@@ -12,8 +12,8 @@
 #user_glance_glance = glancepw .service .admin
 
 set -x
-AUTH_TOKEN=`swift stat -v | grep Token | cut -c 33-`
-GLANCE_TOKEN=`swift -U glance:glance -K glancepw stat -v | grep Token | cut -c 33-`
+AUTH_TOKEN=`swift stat -v | grep Token | awk -F ': ' '{print $2}'`
+GLANCE_TOKEN=`swift -U glance:glance -K glancepw stat -v | grep Token | awk -F ': ' '{print $2}'`
 
 swift post src
 touch obj
