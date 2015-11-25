@@ -33,7 +33,7 @@ sudo truncate -s $(echo $SIZE)GB /srv/swift-disk
 sudo mkfs.xfs /srv/swift-disk
 
 # Add to fstab
-if [ grep -c "/srv/swift-disk" /etc/fstab -gt 0 ]
+if [ $(grep -c "/srv/swift-disk" /etc/fstab) -gt 0 ]
 then
     sudo sed -i 's|^/srv/swift-disk .*$|/srv/swift-disk /mnt/sdb1 xfs loop,noatime,nodiratime,nobarrier,logbufs=8 0 0|' /etc/fstab
 else
