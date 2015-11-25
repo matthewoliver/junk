@@ -62,6 +62,9 @@ mkdir -p /var/run/swift
 chown ${USER}:${USER} /var/run/swift
 EOF
 
+# upgrade pip
+sudo pip install pip --upgrade
+
 # get the code
 cd $HOME; git clone https://github.com/openstack/python-swiftclient.git
 cd $HOME/python-swiftclient; sudo python setup.py develop; cd -
