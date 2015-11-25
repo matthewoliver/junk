@@ -62,15 +62,15 @@ mkdir -p /var/run/swift
 chown ${USER}:${USER} /var/run/swift
 EOF
 
-# upgrade pip
-sudo pip install pip --upgrade
+# upgrade pip and tox
+sudo pip install pip tox --upgrade
 
 # get the code
 cd $HOME; git clone https://github.com/openstack/python-swiftclient.git
-cd $HOME/python-swiftclient; sudo python setup.py develop; cd -
+cd $HOME/python-swiftclient; sudo pip install -e . ; cd -
 
 git clone https://github.com/openstack/swift.git
-cd $HOME/swift; sudo pip install -r requirements.txt; sudo python setup.py develop; cd -
+cd $HOME/swift; sudo pip install -r requirements.txt; sudo pip install -e . ; cd -
 
 if [ $DISTRO -eq $REDHAT ]
 then
