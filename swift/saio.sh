@@ -35,9 +35,9 @@ sudo mkfs.xfs /srv/swift-disk
 # Add to fstab
 if [ grep -c "/srv/swift-disk" /etc/fstab -gt 0 ]
 then
-    sed -i 's|^/srv/swift-disk .*$|/srv/swift-disk /mnt/sdb1 xfs loop,noatime,nodiratime,nobarrier,logbufs=8 0 0|' /etc/fstab
+    sudo sed -i 's|^/srv/swift-disk .*$|/srv/swift-disk /mnt/sdb1 xfs loop,noatime,nodiratime,nobarrier,logbufs=8 0 0|' /etc/fstab
 else
-    echo '/srv/swift-disk /mnt/sdb1 xfs loop,noatime,nodiratime,nobarrier,logbufs=8 0 0' >> /etc/fstab
+    sudo su -c "echo '/srv/swift-disk /mnt/sdb1 xfs loop,noatime,nodiratime,nobarrier,logbufs=8 0 0' >> /etc/fstab"
 fi
 
 # create the mountpoints 
