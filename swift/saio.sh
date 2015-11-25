@@ -55,7 +55,9 @@ sudo chown -R ${USER}:${USER} /var/run/swift
 # **Make sure to include the trailing slash after /srv/$x/**
 for x in {1..4}; do sudo chown -R ${USER}:${USER} /srv/$x/; done
 
-sudo cat << EOF >> /etc/setup_saio_mounts.sh
+sudo touch /etc/setup_saio_mounts.sh
+sudo chown ${USER}:${USER} /etc/setup_saio_mounts.sh
+cat << EOF >> /etc/setup_saio_mounts.sh
 mkdir -p /var/cache/swift /var/cache/swift2 /var/cache/swift3 /var/cache/swift4
 chown ${USER}:${USER} /var/cache/swift*
 mkdir -p /var/run/swift
@@ -63,7 +65,7 @@ chown ${USER}:${USER} /var/run/swift
 EOF
 
 # upgrade pip and tox
-sudo pip install pip tox --upgrade
+sudo pip install pip tox setuptools --upgrade
 
 # get the code
 cd $HOME; git clone https://github.com/openstack/python-swiftclient.git
