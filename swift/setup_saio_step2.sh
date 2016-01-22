@@ -1,0 +1,1 @@
+git clone http://github.com/matthewoliver/junk; git clone https://github.com/matthewoliver/vim_config; cd vim_config; ./setup.sh; cd -; cd junk/swift;sudo apt-get install liberasurecode0 liberasurecode1, bash saio.sh
