@@ -1,5 +1,3 @@
-# Note this was an example written by Christian Schwede (cschwede)
-
 # Used tempauth config for this:
 #[filter:tempauth]
 #use = egg:swift#tempauth

@@ -9,7 +9,7 @@ do
   swift-container-info $cont |grep -A 11 '^Metadata:'
   swift-container-info $cont |grep 'System Metadata:'
   echo "Pivot_points"
-  sqlite3 $cont 'select * from pivot_points;'
+  sqlite3 $cont 'select * from pivot_ranges;'
   echo "DB $i/$count"; echo
   read
 done
