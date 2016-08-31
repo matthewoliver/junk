@@ -144,7 +144,7 @@ storage_user="test:tester"
 storage_password="testing"
 
 # log in
-auth_creds=( \$(curl -s -i -H "X-Storage-User: \$storage_user" -H "X-Storage-Pass: \$storage_password" http://127.0.0.1:8080/auth/v1.0 |egrep 'X-Auth-Token|X-Storage-Url' |awk '{print \$2}') )
+auth_creds=( \$(curl -s -i -H "X-Storage-User: \$storage_user" -H "X-Storage-Pass: \$storage_password" http://127.0.0.1:8080/auth/v1.0 |egrep 'X-Auth-Token:|X-Storage-Url' |awk '{print \$2}') )
 
 export TOKEN="\$( echo \${auth_creds[1]} |tr -d '\r' |tr -d '\n' )"
 export STORAGE_URL="\$( echo \${auth_creds[0]} |tr -d '\r' |tr -d '\n' )"
