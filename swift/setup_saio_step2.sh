@@ -1,5 +1,12 @@
 git clone http://github.com/matthewoliver/junk; git clone https://github.com/matthewoliver/vim_config; cd vim_config; ./setup.sh; cd -; cd junk/swift;sudo apt-get install liberasurecode0 liberasurecode1 liberasurecode-dev; bash saio.sh
 
+cat > ~/.vimrc_overrides <<EOF
+set term=screen-256color
+let g:solarized_termcolors=256
+set background=dark
+" loading the solarized colorscheme is silent to prevent error during initial install
+silent! colorscheme solarized
+EOF
 
 cat >> ~/.bashrc <<EOF
 function git_branch() {
