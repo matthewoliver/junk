@@ -3,6 +3,7 @@ DEBIAN=0
 REDHAT=1
 SIZE=1
 UNIT_TESTS=1
+branch=${1:-master}
 
 DISTRO=$DEBIAN
 
@@ -72,7 +73,7 @@ cd $HOME; git clone https://github.com/openstack/python-swiftclient.git
 cd $HOME/python-swiftclient; sudo pip install -e . ; cd -
 
 git clone https://github.com/openstack/swift.git
-cd $HOME/swift; sudo pip install -r requirements.txt; sudo pip install -e . ; cd -
+cd $HOME/swift; git checkout $branch; sudo pip install -r requirements.txt; sudo pip install -e . ; cd -
 
 if [ $DISTRO -eq $REDHAT ]
 then
