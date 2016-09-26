@@ -1,4 +1,4 @@
-git clone http://github.com/matthewoliver/junk; git clone https://github.com/matthewoliver/vim_config; cd vim_config; ./setup.sh; cd -; cd junk/swift;sudo apt-get install liberasurecode-dev; bash saio.sh
+git clone http://github.com/matthewoliver/junk; git clone https://github.com/matthewoliver/vim_config; cd vim_config; ./setup.sh; cd -; cd junk/swift;sudo apt-get install -y liberasurecode-dev libssl-dev; bash saio.sh
 
 cat > ~/.vimrc_overrides <<EOF
 set term=screen-256color
