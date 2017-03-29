@@ -12,6 +12,7 @@ do
     break
   fi
   let "n=n+1"
+  echo "n == $n"
   sleep 1
 done
 
