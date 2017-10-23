@@ -29,4 +29,4 @@ if len(sys.argv) > 3:
 
 val = ("bytes=" + ",".join("%d-%d" % (x * mult, x * mult + size)
                            for x in range(num)))
-print("Ranges: %s" % val)
+print("range: %s" % val)

@@ -1,31 +1,76 @@
 #!/bin/bash
 DEBIAN=0
 REDHAT=1
+SUSE=2
 SIZE=1
 UNIT_TESTS=1
+BUILD_LIBERASURECODE=1
 branch=${1:-master}
 
-DISTRO=$DEBIAN
+DISTRO=$REDHAT
+
+function build_liberasurecode() {
+  if [ ${BUILD_LIBERASURECODE} -eq 0 ]
+  then
+    return
+  fi
+
+  echo "== Building liberasurecode =="
+  cd $HOME
+  git clone https://github.com/openstack/liberasurecode
+  cd liberasurecode
+
+  if [ $DISTRO -eq $DEBIAN ]
+  then
+    sudo apt-get install -y build-essential autoconf automake libtool
+  else
+    sudo yum install -y gcc make autoconf automake libtool
+  fi
+
+  ./autogen.sh
+  ./configure
+  make
+  sudo make install
+
+  echo '/usr/local/lib' |sudo tee /etc/ld.so.conf.d/lib_ec.conf
+  sudo ldconfig
+}
 
 if [ $DISTRO -eq $DEBIAN ]
 then
   sudo apt-get update
   sudo apt-get install -y curl gcc memcached rsync sqlite3 xfsprogs \
-                      git-core libffi-dev python-setuptools
+                      git-core libffi-dev python-setuptools \
+                      libssl-dev
   sudo apt-get install -y python-coverage python-dev python-nose \
-                       python-simplejson python-xattr python-eventlet \
+                       python-xattr python-eventlet \
                        python-greenlet python-pastedeploy \
                        python-netifaces python-pip python-dnspython \
                        python-mock
 else
   sudo yum update
-  sudo yum install curl gcc memcached rsync sqlite xfsprogs git-core \
-                  libffi-devel xinetd python-setuptools \
-                  python-coverage python-devel python-nose \
-                  pyxattr python-eventlet \
-                  python-greenlet python-paste-deploy \
-                  python-netifaces python-pip python-dns \
-                  python-mock
+  sudo yum install -y epel-release
+  sudo yum install -y curl gcc memcached rsync sqlite xfsprogs git-core \
+                      libffi-devel xinetd \
+                      openssl-devel python-setuptools \
+                      python-coverage python-devel python-nose \
+                      pyxattr python-eventlet \
+                      python-greenlet python-paste-deploy \
+                      python-netifaces python-pip python-dns \
+                      python-mock 
+
+fi
+
+if [ $BUILD_LIBERASURECODE -gt 0 ]
+then
+  build_liberasurecode
+else
+  if [ $DISTRO -eq $DEBIAN ]
+  then
+    sudo apt-get install -y liberasurecode-dev
+  else
+    sudo yum install -y liberasurecode-devel
+  fi
 fi
 
 # Using loopback device
@@ -56,14 +101,41 @@ sudo chown -R ${USER}:${USER} /var/run/swift
 # **Make sure to include the trailing slash after /srv/$x/**
 for x in {1..4}; do sudo chown -R ${USER}:${USER} /srv/$x/; done
 
-sudo touch /etc/setup_saio_mounts.sh
-sudo chown ${USER}:${USER} /etc/setup_saio_mounts.sh
-cat << EOF >> /etc/setup_saio_mounts.sh
+setup_saio_mounts=/usr/local/bin/setup_saio_mounts.sh
+sudo mkdir -p $(dirname $setup_saio_mounts)
+sudo touch $setup_saio_mounts
+sudo chmod +x $setup_saio_mounts
+cat << EOF |sudo tee $setup_saio_mounts
 mkdir -p /var/cache/swift /var/cache/swift2 /var/cache/swift3 /var/cache/swift4
 chown ${USER}:${USER} /var/cache/swift*
 mkdir -p /var/run/swift
 chown ${USER}:${USER} /var/run/swift
 EOF
+sudo $setup_saio_mounts
+
+if [ $DISTRO -eq $DEBIAN ]
+then
+  if [ -e /etc/rc.local ] && [ $(grep -c "$setup_saio_mounts" /etc/rc.local) -eq 0 ]
+  then
+    if [$(grep -c "^exit 0" /etc/rc.local) -gt 0]
+    then
+      sudo sed -i "/exit 0/i$setup_saio_mounts\n" /etc/rc.local
+    else
+      echo "$setup_saio_mounts" | sudo tee --append /etc/rc.local
+    fi
+  fi
+elif [ $DISTRO -eq $REDHAT ]
+then
+  if [ -e /etc/rc.d/rc.local ] && [ $(grep -c "$setup_saio_mounts" /etc/rc.d/rc.local) -eq 0 ]
+  then
+    if [$(grep -c "^exit 0" /etc/rc.d/rc.local) -gt 0]
+    then
+      sudo sed -i "/exit 0/i$setup_saio_mounts\n" /etc/rc.d/rc.local
+    else
+      echo "$setup_saio_mounts" |sudo tee --append /etc/rc.d/rc.local
+    fi
+  fi
+fi 
 
 # upgrade pip and tox
 sudo pip install pip tox setuptools --upgrade
@@ -73,7 +145,7 @@ cd $HOME; git clone https://github.com/openstack/python-swiftclient.git
 cd $HOME/python-swiftclient; sudo pip install -e . ; cd -
 
 git clone https://github.com/openstack/swift.git
-cd $HOME/swift; git checkout $branch; sudo pip install -r requirements.txt; sudo pip install -e . ; cd -
+cd $HOME/swift; git checkout $branch; sudo pip install --no-binary cryptography -r requirements.txt; sudo pip install -e . ; cd -
 
 if [ $DISTRO -eq $REDHAT ]
 then
@@ -98,8 +170,8 @@ else
 fi
 
 # Memcache
-sudo service memcached start
-sudo chkconfig memcached on
+sudo systemctl enable memcached.service
+sudo systemctl start memcached.service
 
 # Syslog
 sudo cp $HOME/swift/doc/saio/rsyslog.d/10-swift.conf /etc/rsyslog.d/
@@ -135,21 +207,6 @@ echo "export PATH=${PATH}:$HOME/bin" >> $HOME/.bashrc
 # Make the rings
 $HOME/bin/remakerings
 
-cat << EOF > $HOME/bin/swift_login.env
-#!/bin/bash
-
-#variables
-# auth variables
-storage_user="test:tester"
-storage_password="testing"
-
-# log in
-auth_creds=( \$(curl -s -i -H "X-Storage-User: \$storage_user" -H "X-Storage-Pass: \$storage_password" http://127.0.0.1:8080/auth/v1.0 |egrep 'X-Auth-Token:|X-Storage-Url' |awk '{print \$2}') )
-
-export TOKEN="\$( echo \${auth_creds[1]} |tr -d '\r' |tr -d '\n' )"
-export STORAGE_URL="\$( echo \${auth_creds[0]} |tr -d '\r' |tr -d '\n' )"
-EOF
-echo "source $HOME/bin/swift_login.env" >> $HOME/.bashrc
 . $HOME/.bashrc
 
 
@@ -159,7 +216,9 @@ rsync rsync://pub@localhost/
 
 if [ $UNIT_TESTS -eq 1 ]
 then
-    $HOME/swift/.unittests
+    #$HOME/swift/.unittests
+    cd $HOME/swift
+    tox
 fi
 
 startmain
