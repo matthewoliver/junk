@@ -1,0 +1,14 @@
+I just download the pycharm community tarball and extract it to /opt
+
+  sudo tar -xvf <pycharm_tar> -C /opt
+  sudo chown matt:matt -R /opt/pycharm...
+
+I then have a link '/opt/pycharm' that points the latest pycharm version:
+
+  lrwxrwxrwx. 1 root root 26 Oct 23 13:31 /opt/pycharm -> pycharm-community-2017.2.3
+
+All I then need to do is add `/opt/pycharm/bin` to my PATH.
+
+If your using gnome and want to be able to find it in your menu just place the `pycharm.desktop` in this directory into `~/.local/share/applications/`:
+
+  cp pycharm.desktop ~/.local/share/applications/ 
