@@ -1,4 +1,5 @@
 #!/bin/bash
+export TMPDIR=/mnt/sdb1/tmp
 
 n=0
 while [ True ]
