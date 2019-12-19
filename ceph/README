@@ -1,0 +1,16 @@
+The `vstart_packages.sh` and `stop_packages.sh` are just hacked up versions of ceph's `vstart.sh` and `stop.sh` scripts located in the ceph/src directory.
+
+Currently these have only been tested on centos 7. So once you've installed the ceph master packages from shaman, you can place these in a folder and run `vstart_packages.sh` as you would vstart.sh:
+
+  $ pwd
+  /home/matt/build
+  $ RGW=1 ./vstart_packages.sh --debug -n --localhost
+
+As with `vstart.sh` this will start up a dev env, creating a ceph.conf, out directory and dev directory in the current directory.
+Because the packages are installed, you can just run: 
+
+  ceph -s
+
+etc.
+
+NOTE: These hacked scripts assume 64 bit, ie, /usr/lib64 location.
